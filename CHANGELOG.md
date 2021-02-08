@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## 0.2.1 - 2021-02-08
+### Added
+- `MmapOptions::map_raw` and `MmapRaw`. [@diwic](https://github.com/diwic).
+
 ## 0.2.0 - 2020-12-19
 ### Changed
 - MSRV is 1.31 now (edition 2018).
@@ -22,5 +26,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 - `winapi` dependency. [memmap-rs/pull/89](https://github.com/danburkert/memmap-rs/pull/89)
 
-[Unreleased]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/RazrFalcon/memmap2-rs/compare/v0.1.0...v0.2.0
