@@ -946,6 +946,7 @@ mod test {
                 .unwrap()
         };
         (&mut mmap[..]).write_all(write).unwrap();
+        mmap.flush_async_range(0, write.len()).unwrap();
         mmap.flush_range(0, write.len()).unwrap();
     }
 

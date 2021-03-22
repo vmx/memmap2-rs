@@ -158,16 +158,11 @@ impl MmapInner {
     }
 
     pub fn flush_async(&self, offset: usize, len: usize) -> io::Result<()> {
-        let alignment = offset % page_size();
-        let aligned_offset = offset - alignment;
-        let aligned_len = len + alignment;
-        let result = unsafe {
-            libc::msync(
-                self.ptr.add(aligned_offset),
-                aligned_len as libc::size_t,
-                libc::MS_ASYNC,
-            )
-        };
+        let alignment = (self.ptr as usize + offset) % page_size();
+        let offset = offset as isize - alignment as isize;
+        let len = len + alignment;
+        let result =
+            unsafe { libc::msync(self.ptr.offset(offset), len as libc::size_t, libc::MS_ASYNC) };
         if result == 0 {
             Ok(())
         } else {
