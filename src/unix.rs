@@ -66,7 +66,7 @@ impl MmapInner {
             } else {
                 Ok(MmapInner {
                     ptr: ptr.offset(alignment as isize),
-                    len: len,
+                    len,
                 })
             }
         }
@@ -163,7 +163,7 @@ impl MmapInner {
         let aligned_len = len + alignment;
         let result = unsafe {
             libc::msync(
-                self.ptr.offset(aligned_offset as isize),
+                self.ptr.add(aligned_offset),
                 aligned_len as libc::size_t,
                 libc::MS_ASYNC,
             )

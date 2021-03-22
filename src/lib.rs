@@ -222,7 +222,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map(&self, file: &File) -> Result<Mmap> {
         MmapInner::map(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner: inner })
+            .map(|inner| Mmap { inner })
     }
 
     /// Creates a readable and executable memory map backed by a file.
@@ -233,7 +233,7 @@ impl MmapOptions {
     /// variety of reasons, such as when the file is not open with read permissions.
     pub unsafe fn map_exec(&self, file: &File) -> Result<Mmap> {
         MmapInner::map_exec(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner: inner })
+            .map(|inner| Mmap { inner })
     }
 
     /// Creates a writeable memory map backed by a file.
@@ -271,7 +271,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map_mut(&self, file: &File) -> Result<MmapMut> {
         MmapInner::map_mut(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapMut { inner: inner })
+            .map(|inner| MmapMut { inner })
     }
 
     /// Creates a copy-on-write memory map backed by a file.
@@ -300,7 +300,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map_copy(&self, file: &File) -> Result<MmapMut> {
         MmapInner::map_copy(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapMut { inner: inner })
+            .map(|inner| MmapMut { inner })
     }
 
     /// Creates a copy-on-write read-only memory map backed by a file.
@@ -333,7 +333,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map_copy_read_only(&self, file: &File) -> Result<Mmap> {
         MmapInner::map_copy_read_only(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner: inner })
+            .map(|inner| Mmap { inner })
     }
 
     /// Creates an anonymous memory map.
@@ -345,7 +345,7 @@ impl MmapOptions {
     ///
     /// This method returns an error when the underlying system call fails.
     pub fn map_anon(&self) -> Result<MmapMut> {
-        MmapInner::map_anon(self.len.unwrap_or(0), self.stack).map(|inner| MmapMut { inner: inner })
+        MmapInner::map_anon(self.len.unwrap_or(0), self.stack).map(|inner| MmapMut { inner })
     }
 
     /// Creates a raw memory map.
@@ -356,7 +356,7 @@ impl MmapOptions {
     /// variety of reasons, such as when the file is not open with read and write permissions.
     pub fn map_raw(&self, file: &File) -> Result<MmapRaw> {
         MmapInner::map_mut(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapRaw { inner: inner })
+            .map(|inner| MmapRaw { inner })
     }
 }
 
