@@ -6,6 +6,27 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  check:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        target: x86_64-pc-windows-gnu
+
+    - name: Run checks
+      env:
+        CLIPPY_OPTS: --allow clippy::len_without_is_empty --allow clippy::missing_safety_doc
+      run: |
+        cargo fmt -- --check
+        cargo clippy -- $CLIPPY_OPTS
+        cargo clippy --target x86_64-pc-windows-gnu -- $CLIPPY_OPTS
+
   test-win:
     runs-on: windows-2019
     strategy:
@@ -23,6 +44,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+        profile: minimal
         target: ${{ matrix.target }}
         override: true
 
@@ -55,6 +77,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+        profile: minimal
         target: ${{ matrix.target }}
         override: true
 
@@ -71,6 +94,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: 1.32.0
+        profile: minimal
         override: true
 
     - name: Run tests
