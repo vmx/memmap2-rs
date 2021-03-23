@@ -10,7 +10,7 @@ use windows::MmapInner;
 #[cfg(unix)]
 mod unix;
 #[cfg(unix)]
-use crate::unix::MmapInner;
+use unix::MmapInner;
 
 use std::fmt;
 use std::fs::File;
@@ -222,7 +222,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map(&self, file: &File) -> Result<Mmap> {
         MmapInner::map(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner: inner })
+            .map(|inner| Mmap { inner })
     }
 
     /// Creates a readable and executable memory map backed by a file.
@@ -233,7 +233,7 @@ impl MmapOptions {
     /// variety of reasons, such as when the file is not open with read permissions.
     pub unsafe fn map_exec(&self, file: &File) -> Result<Mmap> {
         MmapInner::map_exec(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner: inner })
+            .map(|inner| Mmap { inner })
     }
 
     /// Creates a writeable memory map backed by a file.
@@ -271,7 +271,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map_mut(&self, file: &File) -> Result<MmapMut> {
         MmapInner::map_mut(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapMut { inner: inner })
+            .map(|inner| MmapMut { inner })
     }
 
     /// Creates a copy-on-write memory map backed by a file.
@@ -300,7 +300,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map_copy(&self, file: &File) -> Result<MmapMut> {
         MmapInner::map_copy(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapMut { inner: inner })
+            .map(|inner| MmapMut { inner })
     }
 
     /// Creates a copy-on-write read-only memory map backed by a file.
@@ -333,7 +333,7 @@ impl MmapOptions {
     /// ```
     pub unsafe fn map_copy_read_only(&self, file: &File) -> Result<Mmap> {
         MmapInner::map_copy_read_only(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner: inner })
+            .map(|inner| Mmap { inner })
     }
 
     /// Creates an anonymous memory map.
@@ -345,7 +345,7 @@ impl MmapOptions {
     ///
     /// This method returns an error when the underlying system call fails.
     pub fn map_anon(&self) -> Result<MmapMut> {
-        MmapInner::map_anon(self.len.unwrap_or(0), self.stack).map(|inner| MmapMut { inner: inner })
+        MmapInner::map_anon(self.len.unwrap_or(0), self.stack).map(|inner| MmapMut { inner })
     }
 
     /// Creates a raw memory map.
@@ -356,7 +356,7 @@ impl MmapOptions {
     /// variety of reasons, such as when the file is not open with read and write permissions.
     pub fn map_raw(&self, file: &File) -> Result<MmapRaw> {
         MmapInner::map_mut(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapRaw { inner: inner })
+            .map(|inner| MmapRaw { inner })
     }
 }
 
@@ -537,7 +537,9 @@ impl MmapRaw {
     /// To safely dereference this pointer, you need to make sure that the file has not been
     /// truncated since the memory map was created.
     #[inline]
-    pub fn as_ptr(&self) -> *const u8 { self.inner.ptr() }
+    pub fn as_ptr(&self) -> *const u8 {
+        self.inner.ptr()
+    }
 
     /// Returns an unsafe mutable pointer to the memory mapped file.
     ///
@@ -546,13 +548,17 @@ impl MmapRaw {
     /// To safely dereference this pointer, you need to make sure that the file has not been
     /// truncated since the memory map was created.
     #[inline]
-    pub fn as_mut_ptr(&self) -> *mut u8 { self.inner.ptr() as _ }
+    pub fn as_mut_ptr(&self) -> *mut u8 {
+        self.inner.ptr() as _
+    }
 
     /// Returns the length in bytes of the memory map.
     ///
     /// Note that truncating the file can cause the length to change (and render this value unusable).
     #[inline]
-    pub fn len(&self) -> usize { self.inner.len() }
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
 }
 
 impl fmt::Debug for MmapRaw {
@@ -815,8 +821,6 @@ mod test {
     use std::io::{Read, Write};
     #[cfg(windows)]
     use std::os::windows::fs::OpenOptionsExt;
-    use std::sync::Arc;
-    use std::thread;
 
     #[cfg(windows)]
     const GENERIC_ALL: u32 = 0x10000000;
@@ -916,7 +920,7 @@ mod test {
         (&mut mmap[..]).write_all(write).unwrap();
         mmap.flush().unwrap();
 
-        file.read(&mut read).unwrap();
+        file.read_exact(&mut read).unwrap();
         assert_eq!(write, &read);
     }
 
@@ -942,6 +946,7 @@ mod test {
                 .unwrap()
         };
         (&mut mmap[..]).write_all(write).unwrap();
+        mmap.flush_async_range(0, write.len()).unwrap();
         mmap.flush_range(0, write.len()).unwrap();
     }
 
@@ -964,20 +969,20 @@ mod test {
 
         let mut mmap = unsafe { MmapOptions::new().map_copy(&file).unwrap() };
 
-        (&mut mmap[..]).write(write).unwrap();
+        (&mut mmap[..]).write_all(write).unwrap();
         mmap.flush().unwrap();
 
         // The mmap contains the write
-        (&mmap[..]).read(&mut read).unwrap();
+        (&mmap[..]).read_exact(&mut read).unwrap();
         assert_eq!(write, &read);
 
         // The file does not contain the write
-        file.read(&mut read).unwrap();
+        file.read_exact(&mut read).unwrap();
         assert_eq!(nulls, &read);
 
         // another mmap does not contain the write
         let mmap2 = unsafe { MmapOptions::new().map(&file).unwrap() };
-        (&mmap2[..]).read(&mut read).unwrap();
+        (&mmap2[..]).read_exact(&mut read).unwrap();
         assert_eq!(nulls, &read);
     }
 
@@ -998,11 +1003,11 @@ mod test {
         let mut read = [0u8; 6];
 
         let mmap = unsafe { MmapOptions::new().map_copy_read_only(&file).unwrap() };
-        (&mmap[..]).read(&mut read).unwrap();
+        (&mmap[..]).read_exact(&mut read).unwrap();
         assert_eq!(nulls, &read);
 
         let mmap2 = unsafe { MmapOptions::new().map(&file).unwrap() };
-        (&mmap2[..]).read(&mut read).unwrap();
+        (&mmap2[..]).read_exact(&mut read).unwrap();
         assert_eq!(nulls, &read);
     }
 
@@ -1058,10 +1063,15 @@ mod test {
 
     #[test]
     fn sync_send() {
-        let mmap = Arc::new(MmapMut::map_anon(129).unwrap());
-        thread::spawn(move || {
-            &mmap[..];
-        });
+        let mmap = MmapMut::map_anon(129).unwrap();
+
+        fn is_sync_send<T>(_val: T)
+        where
+            T: Sync + Send,
+        {
+        }
+
+        is_sync_send(mmap);
     }
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -1120,7 +1130,7 @@ mod test {
             .create(true)
             .open(&path)
             .expect("open");
-        file.set_len(256 as u64).expect("set_len");
+        file.set_len(256_u64).expect("set_len");
 
         let mmap = unsafe { MmapMut::map_mut(&file).expect("map_mut") };
 
@@ -1130,20 +1140,20 @@ mod test {
         let write = b"abc123";
         let mut read = [0u8; 6];
 
-        (&mut mmap[..]).write(write).unwrap();
+        (&mut mmap[..]).write_all(write).unwrap();
         mmap.flush().unwrap();
 
         // The mmap contains the write
-        (&mmap[..]).read(&mut read).unwrap();
+        (&mmap[..]).read_exact(&mut read).unwrap();
         assert_eq!(write, &read);
 
         // The file should contain the write
-        file.read(&mut read).unwrap();
+        file.read_exact(&mut read).unwrap();
         assert_eq!(write, &read);
 
         // another mmap should contain the write
         let mmap2 = unsafe { MmapOptions::new().map(&file).unwrap() };
-        (&mmap2[..]).read(&mut read).unwrap();
+        (&mmap2[..]).read_exact(&mut read).unwrap();
         assert_eq!(write, &read);
 
         let mmap = mmap.make_exec().expect("make_exec");
@@ -1166,7 +1176,7 @@ mod test {
             .create(true)
             .open(&path)
             .expect("open");
-        file.set_len(256 as u64).expect("set_len");
+        file.set_len(256_u64).expect("set_len");
 
         let mmap = unsafe { MmapOptions::new().map_copy(&file).expect("map_mut") };
 
@@ -1177,20 +1187,20 @@ mod test {
         let write = b"abc123";
         let mut read = [0u8; 6];
 
-        (&mut mmap[..]).write(write).unwrap();
+        (&mut mmap[..]).write_all(write).unwrap();
         mmap.flush().unwrap();
 
         // The mmap contains the write
-        (&mmap[..]).read(&mut read).unwrap();
+        (&mmap[..]).read_exact(&mut read).unwrap();
         assert_eq!(write, &read);
 
         // The file does not contain the write
-        file.read(&mut read).unwrap();
+        file.read_exact(&mut read).unwrap();
         assert_eq!(nulls, &read);
 
         // another mmap does not contain the write
         let mmap2 = unsafe { MmapOptions::new().map(&file).unwrap() };
-        (&mmap2[..]).read(&mut read).unwrap();
+        (&mmap2[..]).read_exact(&mut read).unwrap();
         assert_eq!(nulls, &read);
 
         let mmap = mmap.make_exec().expect("make_exec");
@@ -1220,7 +1230,7 @@ mod test {
             .create(true)
             .open(&path)
             .expect("open");
-        file.write(b"abc123").unwrap();
+        file.write_all(b"abc123").unwrap();
         let mmap = MmapOptions::new().map_raw(&file).unwrap();
         assert_eq!(mmap.len(), 6);
         assert!(!mmap.as_ptr().is_null());
