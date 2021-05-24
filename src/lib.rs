@@ -537,10 +537,10 @@ impl MmapRaw {
 
     /// Returns a raw pointer to the memory mapped file.
     ///
-    /// # Safety
-    ///
-    /// To safely dereference this pointer, you need to make sure that the file has not been
+    /// Before dereferencing this pointer, you have to make sure that the file has not been
     /// truncated since the memory map was created.
+    /// Avoiding this will not introduce memory safety issues in Rust terms,
+    /// but will cause SIGBUS (or equivalent) signal.
     #[inline]
     pub fn as_ptr(&self) -> *const u8 {
         self.inner.ptr()
@@ -548,10 +548,10 @@ impl MmapRaw {
 
     /// Returns an unsafe mutable pointer to the memory mapped file.
     ///
-    /// # Safety
-    ///
-    /// To safely dereference this pointer, you need to make sure that the file has not been
+    /// Before dereferencing this pointer, you have to make sure that the file has not been
     /// truncated since the memory map was created.
+    /// Avoiding this will not introduce memory safety issues in Rust terms,
+    /// but will cause SIGBUS (or equivalent) signal.
     #[inline]
     pub fn as_mut_ptr(&self) -> *mut u8 {
         self.inner.ptr() as _
