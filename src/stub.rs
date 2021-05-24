@@ -1,5 +1,5 @@
-use std::io;
 use std::fs::File;
+use std::io;
 
 pub struct MmapInner {
     // Private member to prevent external construction
@@ -9,7 +9,10 @@ pub struct MmapInner {
 
 impl MmapInner {
     fn new() -> io::Result<MmapInner> {
-        Err(io::Error::new(io::ErrorKind::Other, "platform not supported"))
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "platform not supported",
+        ))
     }
 
     pub fn map(_: usize, _: &File, _: u64) -> io::Result<MmapInner> {
