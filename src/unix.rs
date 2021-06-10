@@ -235,5 +235,14 @@ fn page_size() -> usize {
 }
 
 pub fn file_len(file: &File) -> io::Result<usize> {
-    Ok(file.metadata()?.len() as usize)
+    unsafe {
+        let mut stat: libc::stat = std::mem::zeroed();
+
+        let result = libc::fstat(file.as_raw_fd(), &mut stat);
+        if result == 0 {
+            Ok(stat.st_size as usize)
+        } else {
+            Err(io::Error::last_os_error())
+        }
+    }
 }
