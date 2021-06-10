@@ -233,3 +233,7 @@ unsafe impl Send for MmapInner {}
 fn page_size() -> usize {
     unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize }
 }
+
+pub fn file_len(file: &File) -> io::Result<usize> {
+    Ok(file.metadata()?.len() as usize)
+}

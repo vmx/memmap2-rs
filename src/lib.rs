@@ -5,10 +5,14 @@
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
+use crate::windows::file_len;
+#[cfg(windows)]
 use crate::windows::MmapInner;
 
 #[cfg(unix)]
 mod unix;
+#[cfg(unix)]
+use crate::unix::file_len;
 #[cfg(unix)]
 use crate::unix::MmapInner;
 
@@ -137,7 +141,8 @@ impl MmapOptions {
     /// Returns the configured length, or the length of the provided file.
     fn get_len(&self, file: &File) -> Result<usize> {
         self.len.map(Ok).unwrap_or_else(|| {
-            let len = file.metadata()?.len() - self.offset;
+            let file_len = file_len(file)?;
+            let len = file_len as u64 - self.offset;
             if len > (usize::MAX as u64) {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
