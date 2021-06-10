@@ -5,12 +5,12 @@
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-use windows::MmapInner;
+use crate::windows::MmapInner;
 
 #[cfg(unix)]
 mod unix;
 #[cfg(unix)]
-use unix::MmapInner;
+use crate::unix::MmapInner;
 
 #[cfg(not(any(unix, windows)))]
 mod stub;
