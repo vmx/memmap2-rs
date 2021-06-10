@@ -28,6 +28,18 @@ use std::ops::{Deref, DerefMut};
 use std::slice;
 use std::usize;
 
+pub struct MmapRawDescriptor<'a>(&'a File);
+
+pub trait MmapAsRawDesc {
+    fn as_raw_desc(&self) -> MmapRawDescriptor;
+}
+
+impl MmapAsRawDesc for &File {
+    fn as_raw_desc(&self) -> MmapRawDescriptor {
+        MmapRawDescriptor(self)
+    }
+}
+
 /// A memory map builder, providing advanced options and flags for specifying memory map behavior.
 ///
 /// `MmapOptions` can be used to create an anonymous memory map using [`map_anon()`], or a
@@ -139,9 +151,10 @@ impl MmapOptions {
     }
 
     /// Returns the configured length, or the length of the provided file.
-    fn get_len(&self, file: &File) -> Result<usize> {
+    fn get_len<T: MmapAsRawDesc>(&self, file: &T) -> Result<usize> {
         self.len.map(Ok).unwrap_or_else(|| {
-            let file_len = file_len(file)?;
+            let desc = file.as_raw_desc();
+            let file_len = file_len(desc.0)?;
             let len = file_len as u64 - self.offset;
             if len > (usize::MAX as u64) {
                 return Err(Error::new(
@@ -230,8 +243,10 @@ impl MmapOptions {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn map(&self, file: &File) -> Result<Mmap> {
-        MmapInner::map(self.get_len(file)?, file, self.offset, self.populate)
+    pub unsafe fn map<T: MmapAsRawDesc>(&self, file: T) -> Result<Mmap> {
+        let desc = file.as_raw_desc();
+
+        MmapInner::map(self.get_len(&file)?, desc.0, self.offset, self.populate)
             .map(|inner| Mmap { inner })
     }
 
@@ -241,9 +256,11 @@ impl MmapOptions {
     ///
     /// This method returns an error when the underlying system call fails, which can happen for a
     /// variety of reasons, such as when the file is not open with read permissions.
-    pub unsafe fn map_exec(&self, file: &File) -> Result<Mmap> {
-        MmapInner::map_exec(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner })
+    pub unsafe fn map_exec<T: MmapAsRawDesc>(&self, file: T) -> Result<Mmap> {
+        let desc = file.as_raw_desc();
+
+        MmapInner::map_exec(self.get_len(&file)?, desc.0, self.offset, self.populate)
+            .map(|inner| Mmap { inner: inner })
     }
 
     /// Creates a writeable memory map backed by a file.
@@ -279,9 +296,11 @@ impl MmapOptions {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn map_mut(&self, file: &File) -> Result<MmapMut> {
-        MmapInner::map_mut(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapMut { inner })
+    pub unsafe fn map_mut<T: MmapAsRawDesc>(&self, file: T) -> Result<MmapMut> {
+        let desc = file.as_raw_desc();
+
+        MmapInner::map_mut(self.get_len(&file)?, desc.0, self.offset, self.populate)
+            .map(|inner| MmapMut { inner: inner })
     }
 
     /// Creates a copy-on-write memory map backed by a file.
@@ -308,9 +327,11 @@ impl MmapOptions {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn map_copy(&self, file: &File) -> Result<MmapMut> {
-        MmapInner::map_copy(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapMut { inner })
+    pub unsafe fn map_copy<T: MmapAsRawDesc>(&self, file: T) -> Result<MmapMut> {
+        let desc = file.as_raw_desc();
+
+        MmapInner::map_copy(self.get_len(&file)?, desc.0, self.offset, self.populate)
+            .map(|inner| MmapMut { inner: inner })
     }
 
     /// Creates a copy-on-write read-only memory map backed by a file.
@@ -341,9 +362,11 @@ impl MmapOptions {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn map_copy_read_only(&self, file: &File) -> Result<Mmap> {
-        MmapInner::map_copy_read_only(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| Mmap { inner })
+    pub unsafe fn map_copy_read_only<T: MmapAsRawDesc>(&self, file: T) -> Result<Mmap> {
+        let desc = file.as_raw_desc();
+
+        MmapInner::map_copy_read_only(self.get_len(&file)?, desc.0, self.offset, self.populate)
+            .map(|inner| Mmap { inner: inner })
     }
 
     /// Creates an anonymous memory map.
@@ -364,9 +387,11 @@ impl MmapOptions {
     ///
     /// This method returns an error when the underlying system call fails, which can happen for a
     /// variety of reasons, such as when the file is not open with read and write permissions.
-    pub fn map_raw(&self, file: &File) -> Result<MmapRaw> {
-        MmapInner::map_mut(self.get_len(file)?, file, self.offset, self.populate)
-            .map(|inner| MmapRaw { inner })
+    pub fn map_raw<T: MmapAsRawDesc>(&self, file: T) -> Result<MmapRaw> {
+        let desc = file.as_raw_desc();
+
+        MmapInner::map_mut(self.get_len(&file)?, desc.0, self.offset, self.populate)
+            .map(|inner| MmapRaw { inner: inner })
     }
 }
 
@@ -447,7 +472,7 @@ impl Mmap {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn map(file: &File) -> Result<Mmap> {
+    pub unsafe fn map<T: MmapAsRawDesc>(file: T) -> Result<Mmap> {
         MmapOptions::new().map(file)
     }
 
@@ -536,7 +561,7 @@ impl MmapRaw {
     ///
     /// This method returns an error when the underlying system call fails, which can happen for a
     /// variety of reasons, such as when the file is not open with read and write permissions.
-    pub fn map_raw(file: &File) -> Result<MmapRaw> {
+    pub fn map_raw<T: MmapAsRawDesc>(file: T) -> Result<MmapRaw> {
         MmapOptions::new().map_raw(file)
     }
 
@@ -649,7 +674,7 @@ impl MmapMut {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn map_mut(file: &File) -> Result<MmapMut> {
+    pub unsafe fn map_mut<T: MmapAsRawDesc>(file: T) -> Result<MmapMut> {
         MmapOptions::new().map_mut(file)
     }
 
