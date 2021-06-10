@@ -25,18 +25,39 @@ use std::fmt;
 use std::fs::File;
 use std::io::{Error, ErrorKind, Result};
 use std::ops::{Deref, DerefMut};
+#[cfg(unix)]
+use std::os::unix::io::AsRawFd;
 use std::slice;
 use std::usize;
 
+#[cfg(windows)]
 pub struct MmapRawDescriptor<'a>(&'a File);
+
+#[cfg(unix)]
+pub struct MmapRawDescriptor(std::os::unix::io::RawFd);
 
 pub trait MmapAsRawDesc {
     fn as_raw_desc(&self) -> MmapRawDescriptor;
 }
 
+#[cfg(windows)]
 impl MmapAsRawDesc for &File {
     fn as_raw_desc(&self) -> MmapRawDescriptor {
         MmapRawDescriptor(self)
+    }
+}
+
+#[cfg(unix)]
+impl MmapAsRawDesc for &File {
+    fn as_raw_desc(&self) -> MmapRawDescriptor {
+        MmapRawDescriptor(self.as_raw_fd())
+    }
+}
+
+#[cfg(unix)]
+impl MmapAsRawDesc for std::os::unix::io::RawFd {
+    fn as_raw_desc(&self) -> MmapRawDescriptor {
+        MmapRawDescriptor(*self)
     }
 }
 
@@ -854,6 +875,8 @@ mod test {
 
     use std::fs::OpenOptions;
     use std::io::{Read, Write};
+    #[cfg(unix)]
+    use std::os::unix::io::AsRawFd;
     #[cfg(windows)]
     use std::os::windows::fs::OpenOptionsExt;
 
@@ -878,6 +901,39 @@ mod test {
         file.set_len(expected_len as u64).unwrap();
 
         let mut mmap = unsafe { MmapMut::map_mut(&file).unwrap() };
+        let len = mmap.len();
+        assert_eq!(expected_len, len);
+
+        let zeros = vec![0; len];
+        let incr: Vec<u8> = (0..len as u8).collect();
+
+        // check that the mmap is empty
+        assert_eq!(&zeros[..], &mmap[..]);
+
+        // write values into the mmap
+        (&mut mmap[..]).write_all(&incr[..]).unwrap();
+
+        // read values back
+        assert_eq!(&incr[..], &mmap[..]);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn map_fd() {
+        let expected_len = 128;
+        let tempdir = tempdir::TempDir::new("mmap").unwrap();
+        let path = tempdir.path().join("mmap");
+
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&path)
+            .unwrap();
+
+        file.set_len(expected_len as u64).unwrap();
+
+        let mut mmap = unsafe { MmapMut::map_mut(file.as_raw_fd()).unwrap() };
         let len = mmap.len();
         assert_eq!(expected_len, len);
 
