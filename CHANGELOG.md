@@ -8,12 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.3.0] - 2021-06-10
 ### Changed
-- `MmapOptions` allows mapping using Unix descriptors and not only `std::fs:File` now.
+- `MmapOptions` allows mapping using Unix descriptors and not only `std::fs::File` now.
   [@mripard](https://github.com/mripard)
 
 ## [0.2.3] - 2021-05-24
 ### Added
-- Allow compilation on unsupported platform.
+- Allow compilation on unsupported platforms.
   The code will panic on access just like in `std`.
   [@jcaesar](https://github.com/jcaesar)
 
