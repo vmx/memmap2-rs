@@ -7,7 +7,7 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -61,7 +61,7 @@ jobs:
       run: cargo test
 
   test-linux:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         target:
@@ -85,7 +85,7 @@ jobs:
       run: cargo test
 
   check-stub:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         target:
@@ -106,7 +106,7 @@ jobs:
       run: cargo check --all-targets --target ${{ matrix.target }}
 
   test-msrv:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout
       uses: actions/checkout@v2
