@@ -7,7 +7,7 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -61,7 +61,7 @@ jobs:
       run: cargo test
 
   test-linux:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         target:
@@ -84,8 +84,29 @@ jobs:
     - name: Run tests
       run: cargo test
 
+  check-stub:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        target:
+          - wasm32-unknown-unknown
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        target: ${{ matrix.target }}
+        override: true
+
+    - name: Run check
+      run: cargo check --all-targets --target ${{ matrix.target }}
+
   test-msrv:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout
       uses: actions/checkout@v2

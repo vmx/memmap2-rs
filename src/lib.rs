@@ -19,6 +19,8 @@ use crate::unix::MmapInner;
 #[cfg(not(any(unix, windows)))]
 mod stub;
 #[cfg(not(any(unix, windows)))]
+use crate::stub::file_len;
+#[cfg(not(any(unix, windows)))]
 use crate::stub::MmapInner;
 
 use std::fmt;
@@ -35,6 +37,9 @@ pub struct MmapRawDescriptor<'a>(&'a File);
 
 #[cfg(unix)]
 pub struct MmapRawDescriptor(std::os::unix::io::RawFd);
+
+#[cfg(not(any(unix, windows)))]
+pub struct MmapRawDescriptor<'a>(&'a File);
 
 pub trait MmapAsRawDesc {
     fn as_raw_desc(&self) -> MmapRawDescriptor;
@@ -58,6 +63,13 @@ impl MmapAsRawDesc for &File {
 impl MmapAsRawDesc for std::os::unix::io::RawFd {
     fn as_raw_desc(&self) -> MmapRawDescriptor {
         MmapRawDescriptor(*self)
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+impl MmapAsRawDesc for &File {
+    fn as_raw_desc(&self) -> MmapRawDescriptor {
+        MmapRawDescriptor(self)
     }
 }
 
