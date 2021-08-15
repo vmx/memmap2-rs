@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.3.1] - 2021-08-15
 ### Fixed
 - Integer overflow during file length calculation on 32bit targets.
+- Stub implementation. [@Mrmaxmeier](https://github.com/Mrmaxmeier)
 
 ## [0.3.0] - 2021-06-10
 ### Changed
