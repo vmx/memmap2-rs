@@ -188,13 +188,25 @@ impl MmapOptions {
         self.len.map(Ok).unwrap_or_else(|| {
             let desc = file.as_raw_desc();
             let file_len = file_len(desc.0)?;
-            let len = file_len as u64 - self.offset;
-            if len > (usize::MAX as u64) {
+
+            if file_len < self.offset {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
-                    "memory map length overflows usize",
+                    "memory map offset is larger than length",
                 ));
             }
+            let len = file_len - self.offset;
+
+            #[cfg(not(target_pointer_width = "64"))]
+            {
+                if len > (usize::MAX as u64) {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "memory map length overflows usize",
+                    ));
+                }
+            }
+
             Ok(len as usize)
         })
     }

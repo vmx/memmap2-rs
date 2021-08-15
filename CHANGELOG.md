@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- Integer overflow during file length calculation on 32bit targets.
 
 ## [0.3.0] - 2021-06-10
 ### Changed
