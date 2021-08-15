@@ -40,13 +40,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Install toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        target: ${{ matrix.target }}
-        override: true
+    - name: Set default target
+      run: rustup default stable-${{ matrix.target }}
 
     - name: Run tests
       run: cargo test
@@ -66,30 +61,23 @@ jobs:
       matrix:
         target:
           - i686-unknown-linux-gnu
-          - i686-unknown-linux-musl
           - x86_64-unknown-linux-gnu
-          - x86_64-unknown-linux-musl
     steps:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Install toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        target: ${{ matrix.target }}
-        override: true
+    - name: Set default target
+      run: rustup default stable-${{ matrix.target }}
+
+    - name: Install multilib
+      if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
+      run: sudo apt install gcc-multilib
 
     - name: Run tests
       run: cargo test
 
   check-stub:
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        target:
-          - wasm32-unknown-unknown
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -99,11 +87,11 @@ jobs:
       with:
         toolchain: stable
         profile: minimal
-        target: ${{ matrix.target }}
+        target: wasm32-unknown-unknown
         override: true
 
     - name: Run check
-      run: cargo check --all-targets --target ${{ matrix.target }}
+      run: cargo check --target wasm32-unknown-unknown
 
   test-msrv:
     runs-on: ubuntu-20.04
