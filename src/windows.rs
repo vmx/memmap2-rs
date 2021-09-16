@@ -119,6 +119,11 @@ extern "system" {
     fn GetSystemInfo(lpSystemInfo: LPSYSTEM_INFO);
 }
 
+/// Returns a fixed pointer that is valid for `slice::from_raw_parts::<u8>` with `len == 0`.
+fn empty_slice_ptr() -> *mut c_void {
+    std::ptr::NonNull::<u8>::dangling().cast().as_ptr()
+}
+
 pub struct MmapInner {
     file: Option<File>,
     ptr: *mut c_void,
@@ -141,6 +146,22 @@ impl MmapInner {
         let alignment = offset % allocation_granularity() as u64;
         let aligned_offset = offset - alignment as u64;
         let aligned_len = len + alignment as usize;
+        if aligned_len == 0 {
+            // `CreateFileMappingW` documents:
+            //
+            // https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-createfilemappingw
+            // > An attempt to map a file with a length of 0 (zero) fails with an error code
+            // > of ERROR_FILE_INVALID. Applications should test for files with a length of 0
+            // > (zero) and reject those files.
+            //
+            // For such files, don’t create a mapping at all and use a marker pointer instead.
+            return Ok(MmapInner {
+                file: None,
+                ptr: empty_slice_ptr(),
+                len: 0,
+                copy,
+            });
+        }
 
         unsafe {
             let handle = CreateFileMappingW(
@@ -289,6 +310,8 @@ impl MmapInner {
     }
 
     pub fn map_anon(len: usize, _stack: bool) -> io::Result<MmapInner> {
+        // Ensure a non-zero length for the underlying mapping
+        let mapped_len = len.max(1);
         unsafe {
             // Create a mapping and view with maximum access permissions, then use `VirtualProtect`
             // to set the actual `Protection`. This way, we can set more permissive protection later
@@ -299,15 +322,15 @@ impl MmapInner {
                 INVALID_HANDLE_VALUE,
                 ptr::null_mut(),
                 PAGE_EXECUTE_READWRITE,
-                (len >> 16 >> 16) as DWORD,
-                (len & 0xffffffff) as DWORD,
+                (mapped_len >> 16 >> 16) as DWORD,
+                (mapped_len & 0xffffffff) as DWORD,
                 ptr::null(),
             );
             if handle.is_null() {
                 return Err(io::Error::last_os_error());
             }
             let access = FILE_MAP_ALL_ACCESS | FILE_MAP_EXECUTE;
-            let ptr = MapViewOfFile(handle, access, 0, 0, len as SIZE_T);
+            let ptr = MapViewOfFile(handle, access, 0, 0, mapped_len as SIZE_T);
             CloseHandle(handle);
 
             if ptr.is_null() {
@@ -315,7 +338,7 @@ impl MmapInner {
             }
 
             let mut old = 0;
-            let result = VirtualProtect(ptr, len as SIZE_T, PAGE_READWRITE, &mut old);
+            let result = VirtualProtect(ptr, mapped_len as SIZE_T, PAGE_READWRITE, &mut old);
             if result != 0 {
                 Ok(MmapInner {
                     file: None,
@@ -338,6 +361,9 @@ impl MmapInner {
     }
 
     pub fn flush_async(&self, offset: usize, len: usize) -> io::Result<()> {
+        if self.ptr == empty_slice_ptr() {
+            return Ok(());
+        }
         let result = unsafe { FlushViewOfFile(self.ptr.add(offset), len as SIZE_T) };
         if result != 0 {
             Ok(())
@@ -347,6 +373,9 @@ impl MmapInner {
     }
 
     fn virtual_protect(&mut self, protect: DWORD) -> io::Result<()> {
+        if self.ptr == empty_slice_ptr() {
+            return Ok(());
+        }
         unsafe {
             let alignment = self.ptr as usize % allocation_granularity();
             let ptr = self.ptr.offset(-(alignment as isize));
@@ -401,6 +430,9 @@ impl MmapInner {
 
 impl Drop for MmapInner {
     fn drop(&mut self) {
+        if self.ptr == empty_slice_ptr() {
+            return;
+        }
         let alignment = self.ptr as usize % allocation_granularity();
         unsafe {
             let ptr = self.ptr.offset(-(alignment as isize));
