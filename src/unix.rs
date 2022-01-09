@@ -272,10 +272,15 @@ fn page_size() -> usize {
 }
 
 pub fn file_len(file: RawFd) -> io::Result<u64> {
-    unsafe {
-        let mut stat = MaybeUninit::<libc::stat>::uninit();
+    #[cfg(not(any(target_os = "linux", target_os = "emscripten", target_os = "l4re")))]
+    use libc::{fstat, stat};
+    #[cfg(any(target_os = "linux", target_os = "emscripten", target_os = "l4re"))]
+    use libc::{fstat64 as fstat, stat64 as stat};
 
-        let result = libc::fstat(file, stat.as_mut_ptr());
+    unsafe {
+        let mut stat = MaybeUninit::<stat>::uninit();
+
+        let result = fstat(file, stat.as_mut_ptr());
         if result == 0 {
             Ok(stat.assume_init().st_size as u64)
         } else {
