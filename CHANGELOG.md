@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.5.1] - 2022-01-09
 ### Fixed
-- Explicitly call `fstat64` on Linux, emscripten and targets.
+- Explicitly call `fstat64` on Linux, emscripten and l4re targets.
   [@adamreichold](https://github.com/adamreichold)
 
 ## [0.5.0] - 2021-09-19
