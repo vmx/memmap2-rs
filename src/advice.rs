@@ -263,11 +263,11 @@ pub enum Advice {
     /// zero-filled pages on demand, other pages will be left as is.
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     FreeReuse = libc::MADV_FREE_REUSE,
-
-    // Future expansion:
-    // MADV_SOFT_OFFLINE  (since Linux 2.6.33)
-    // MADV_WIPEONFORK  (since Linux 4.14)
-    // MADV_KEEPONFORK  (since Linux 4.14)
-    // MADV_COLD  (since Linux 5.4)
-    // MADV_PAGEOUT  (since Linux 5.4)
 }
+
+// Future expansion:
+// MADV_SOFT_OFFLINE  (since Linux 2.6.33)
+// MADV_WIPEONFORK  (since Linux 4.14)
+// MADV_KEEPONFORK  (since Linux 4.14)
+// MADV_COLD  (since Linux 5.4)
+// MADV_PAGEOUT  (since Linux 5.4)
