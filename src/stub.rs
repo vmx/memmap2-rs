@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io;
 
+// A stable alternative to https://doc.rust-lang.org/stable/std/primitive.never.html
 enum Never {}
 
 pub struct MmapInner {

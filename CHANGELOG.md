@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- Add madvice operations specific to Darwin. [@turbocool3r](https://github.com/turbocool3r)
+- Implement common traits for the `Advice` enum. [@nyurik](https://github.com/nyurik)
+
+### Changed
+- Make stub implementation Infallible. [@coolreader18](https://github.com/coolreader18)
+- Use `tempfile` crate instead of `tempdir` in tests.
+  [@alexanderkjall](https://github.com/alexanderkjall)
 
 ## [0.5.3] - 2022-02-10
 ### Added
