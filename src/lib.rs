@@ -51,13 +51,14 @@ use std::fmt;
 #[cfg(not(any(unix, windows)))]
 use std::fs::File;
 use std::io::{Error, ErrorKind, Result};
+use std::isize;
+use std::mem;
 use std::ops::{Deref, DerefMut};
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, RawFd};
 #[cfg(windows)]
 use std::os::windows::io::{AsRawHandle, RawHandle};
 use std::slice;
-use std::usize;
 
 #[cfg(not(any(unix, windows)))]
 pub struct MmapRawDescriptor<'a>(&'a File);
@@ -237,15 +238,11 @@ impl MmapOptions {
             }
             let len = file_len - self.offset;
 
-            // This check it not relevant on 64bit targets, because usize == u64
-            #[cfg(not(target_pointer_width = "64"))]
-            {
-                if len > (usize::MAX as u64) {
-                    return Err(Error::new(
-                        ErrorKind::InvalidData,
-                        "memory map length overflows usize",
-                    ));
-                }
+            if mem::size_of::<usize>() < 8 && len > isize::MAX as u64 {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "memory map length overflows isize",
+                ));
             }
 
             Ok(len as usize)
@@ -457,14 +454,24 @@ impl MmapOptions {
 
     /// Creates an anonymous memory map.
     ///
-    /// Note: the memory map length must be configured to be greater than 0 before creating an
-    /// anonymous memory map using `MmapOptions::len()`.
+    /// The memory map length should be configured using [`MmapOptions::len()`]
+    /// before creating an anonymous memory map, otherwise a zero-length mapping
+    /// will be crated.
     ///
     /// # Errors
     ///
     /// This method returns an error when the underlying system call fails.
     pub fn map_anon(&self) -> Result<MmapMut> {
-        MmapInner::map_anon(self.len.unwrap_or(0), self.stack).map(|inner| MmapMut { inner })
+        let len = self.len.unwrap_or(0);
+
+        if mem::size_of::<usize>() < 8 && len > isize::MAX as usize {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "memory map length overflows isize",
+            ));
+        }
+
+        MmapInner::map_anon(len, self.stack).map(|inner| MmapMut { inner })
     }
 
     /// Creates a raw memory map.
@@ -1039,6 +1046,7 @@ mod test {
     use crate::advice::Advice;
     use std::fs::OpenOptions;
     use std::io::{Read, Write};
+    use std::mem;
     #[cfg(unix)]
     use std::os::unix::io::AsRawFd;
     #[cfg(windows)]
@@ -1155,6 +1163,17 @@ mod test {
     #[test]
     fn map_anon_zero_len() {
         assert!(MmapOptions::new().map_anon().unwrap().is_empty())
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "32")]
+    fn map_anon_len_overflow() {
+        let res = MmapMut::map_anon(0x80000000);
+
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "memory map length overflows isize"
+        );
     }
 
     #[test]
@@ -1333,7 +1352,6 @@ mod test {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     fn jit_x86(mut mmap: MmapMut) {
-        use std::mem;
         mmap[0] = 0xB8; // mov eax, 0xAB
         mmap[1] = 0xAB;
         mmap[2] = 0x00;
