@@ -238,6 +238,15 @@ impl MmapOptions {
             }
             let len = file_len - self.offset;
 
+            // Rust's slice cannot be larger than isize::MAX.
+            // See https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html
+            //
+            // This is not a problem on 64-bit targets, but on 32-bit one
+            // having a file or an anonymous mapping larger than 2GB is quite normal
+            // and we have to prevent it.
+            //
+            // The code below is essentially the same as in Rust's std:
+            // https://github.com/rust-lang/rust/blob/db78ab70a88a0a5e89031d7ee4eccec835dcdbde/library/alloc/src/raw_vec.rs#L495
             if mem::size_of::<usize>() < 8 && len > isize::MAX as u64 {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
@@ -460,10 +469,12 @@ impl MmapOptions {
     ///
     /// # Errors
     ///
-    /// This method returns an error when the underlying system call fails.
+    /// This method returns an error when the underlying system call fails or
+    /// when `len > isize::MAX`.
     pub fn map_anon(&self) -> Result<MmapMut> {
         let len = self.len.unwrap_or(0);
 
+        // See get_len() for details.
         if mem::size_of::<usize>() < 8 && len > isize::MAX as usize {
             return Err(Error::new(
                 ErrorKind::InvalidData,
@@ -863,7 +874,8 @@ impl MmapMut {
     ///
     /// # Errors
     ///
-    /// This method returns an error when the underlying system call fails.
+    /// This method returns an error when the underlying system call fails or
+    /// when `len > isize::MAX`.
     pub fn map_anon(length: usize) -> Result<MmapMut> {
         MmapOptions::new().len(length).map_anon()
     }
@@ -1046,7 +1058,6 @@ mod test {
     use crate::advice::Advice;
     use std::fs::OpenOptions;
     use std::io::{Read, Write};
-    use std::mem;
     #[cfg(unix)]
     use std::os::unix::io::AsRawFd;
     #[cfg(windows)]
@@ -1361,7 +1372,7 @@ mod test {
 
         let mmap = mmap.make_exec().expect("make_exec");
 
-        let jitfn: extern "C" fn() -> u8 = unsafe { mem::transmute(mmap.as_ptr()) };
+        let jitfn: extern "C" fn() -> u8 = unsafe { std::mem::transmute(mmap.as_ptr()) };
         assert_eq!(jitfn(), 0xab);
     }
 
