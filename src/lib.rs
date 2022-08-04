@@ -629,6 +629,22 @@ impl Mmap {
     pub fn advise(&self, advice: Advice) -> Result<()> {
         self.inner.advise(advice)
     }
+
+    /// Lock the whole memory map into RAM. Only supported on Unix.
+    ///
+    /// See [mlock()](https://man7.org/linux/man-pages/man2/mlock.2.html) map page.
+    #[cfg(unix)]
+    pub fn lock(&mut self) -> Result<()> {
+        self.inner.lock()
+    }
+
+    /// Unlock the whole memory map. Only supported on Unix.
+    ///
+    /// See [munlock()](https://man7.org/linux/man-pages/man2/munlock.2.html) map page.
+    #[cfg(unix)]
+    pub fn unlock(&mut self) -> Result<()> {
+        self.inner.unlock()
+    }
 }
 
 #[cfg(feature = "stable_deref_trait")]
@@ -1005,6 +1021,22 @@ impl MmapMut {
     #[cfg(unix)]
     pub fn advise(&self, advice: Advice) -> Result<()> {
         self.inner.advise(advice)
+    }
+
+    /// Lock the whole memory map into RAM. Only supported on Unix.
+    ///
+    /// See [mlock()](https://man7.org/linux/man-pages/man2/mlock.2.html) map page.
+    #[cfg(unix)]
+    pub fn lock(&mut self) -> Result<()> {
+        self.inner.lock()
+    }
+
+    /// Unlock the whole memory map. Only supported on Unix.
+    ///
+    /// See [munlock()](https://man7.org/linux/man-pages/man2/munlock.2.html) map page.
+    #[cfg(unix)]
+    pub fn unlock(&mut self) -> Result<()> {
+        self.inner.unlock()
     }
 }
 
