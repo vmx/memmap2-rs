@@ -1622,9 +1622,8 @@ mod test {
     /// Returns true if a non-zero amount of memory is locked.
     #[cfg(target_os = "linux")]
     fn is_locked() -> bool {
-        let status_raw =
-            &fs::read("/proc/self/status").expect("/proc/self/status should be available");
-        let status = String::from_utf8_lossy(status_raw);
+        let status = &fs::read_to_string("/proc/self/status")
+            .expect("/proc/self/status should be available");
         for line in status.lines() {
             if line.starts_with("VmLck:") {
                 let numbers = line.replace(|c: char| !c.is_ascii_digit(), "");
