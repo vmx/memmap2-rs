@@ -1088,7 +1088,7 @@ mod test {
 
     #[cfg(unix)]
     use crate::advice::Advice;
-    use std::fs::OpenOptions;
+    use std::fs::{self, OpenOptions};
     use std::io::{Read, Write};
     #[cfg(unix)]
     use std::os::unix::io::AsRawFd;
@@ -1617,5 +1617,58 @@ mod test {
 
         // read values back
         assert_eq!(&incr[..], &mmap[..]);
+    }
+
+    /// Returns true if a non-zero amount of memory is locked.
+    #[cfg(target_os = "linux")]
+    fn is_locked() -> bool {
+        let status_raw =
+            &fs::read("/proc/self/status").expect("/proc/self/status should be available");
+        let status = String::from_utf8_lossy(status_raw);
+        for line in status.lines() {
+            if line.starts_with("VmLck:") {
+                let numbers = line.replace(|c: char| !c.is_ascii_digit(), "");
+                return numbers != "0";
+            }
+        }
+        panic!("cannot get VmLck information")
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn lock() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let path = tempdir.path().join("mmap_lock");
+
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&path)
+            .unwrap();
+        file.set_len(128).unwrap();
+
+        let mut mmap = unsafe { Mmap::map(&file).unwrap() };
+        #[cfg(target_os = "linux")]
+        assert!(!is_locked());
+
+        mmap.lock().expect("mmap lock should be supported on unix");
+        #[cfg(target_os = "linux")]
+        assert!(is_locked());
+
+        mmap.lock()
+            .expect("mmap lock again should not cause problems");
+        #[cfg(target_os = "linux")]
+        assert!(is_locked());
+
+        mmap.unlock()
+            .expect("mmap unlock should be supported on unix");
+        #[cfg(target_os = "linux")]
+        assert!(!is_locked());
+
+        mmap.unlock()
+            .expect("mmap unlock again should not cause problems");
+        #[cfg(target_os = "linux")]
+        assert!(!is_locked());
     }
 }
